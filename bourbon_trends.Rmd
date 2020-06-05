@@ -1,0 +1,140 @@
+---
+title: "Bourbon Search Trends"
+author: "JKelley7"
+date: "6/4/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Google Trends Bourbon Data
+
+As a person who loves data and bourbon, I wanted to have a closer look at overall Bourbon demand. 
+
+If you haven't noticed, Bourbon in recent years has been booming. Gone are the days where one can walk into a liquor store store and pick up a bottle of Weller 12 or Blanton's. These bottles which used to sit on shelves, now, are allocated. These bottles while priced at $30 and $60 MSRP respectively can fetch up to $200 on the secondary. If you enter a liquor store today and ask for Blantons, you'll probably receive an interesting look. Liquor store after liquor store will tell you how those products fly off the shelf as soon as they come in. This demand isn't just seen in those specific products either, distiller after distiller has had to take everyday staples and put them under allocation. 
+
+Typical bourbon on the shelf today will range in age from 4 years old  to 9 years old. This creates a catch 22 for distillers, if they distill too much and the demand dries up it could spell bankruptcy. As one who loves both data and bourbon, I wanted to explore this more. 
+The first step is acquiring data. No distiller or liquor store will give a normal Josh access to their data. I wish they would because as a Marketing Data Scientist I could find a lot of interesting things. Enter Google Trends. While this isn't transnational or distilling data, we can at least see overall demand
+
+Specifically, we are looking at the search term Bourbon in the distilled spirits type category
+```{r}
+library(forecast)
+library(ggplot2)
+```
+
+```{r}
+df.path <- paste0(Sys.getenv("USERPROFILE"),"\\AnacondaProjects\\forecasting\\data")
+df <- read.csv(paste0(df.path, '\\bourbon.csv'))
+dfb <- ts(df$bourbon, start = c(2004,1), frequency = 12)
+
+```
+
+## Exploratory Analysis
+
+When starting any analysis it's vitally important to explore it. One thing we need to establish, what is a search index? According to Google Trends:
+
+oogle Trends normalizes search data to make comparisons between terms easier. Search results are normalized to the time and location of a query by the following process:
+
+Each data point is divided by the total searches of the geography and time range it represents to compare relative popularity. Otherwise, places with the most search volume would always be ranked highest.
+
+The resulting numbers are then scaled on a range of 0 to 100 based on a topic’s proportion to all searches on all topics.
+
+Different regions that show the same search interest for a term don't always have the same total search volumes.
+
+This all may sound confusing and it is. Effectively, Google takes the number of searches for time frame and regions then proceeds to normalize everything based on the max volume during that time frame. 
+
+To explain in more detail, we are looking at the search term Bourbon in the US from 2004 - May 2020. Here we see that Dec 2019 has an index of 100. This implies, the most searches with the keyword Bourbon happened in December 2019 and searches for bourbon in January of 2005 are 25% that of December 2019. It would help to see actual numbers but Google doesn't release that.
+
+Right away we can see an increasing trend in our searches for bourbon and seasonality. 
+
+Let's dive deeper into the seasonality. 
+
+```{r}
+autoplot(dfb, ylab = "Bourbon Search Index")
+```
+## Seasonality
+
+Looking out our seasonality, we can see peaks come in November and December and spills over a littler bit in January. This is mainly driven by:
+* Holidays (Thanksgiving and Christmas)
+* Limited Releases
+
+
+We also see another, small, spike in seasonality mid year. This is more than likely driven by Fathers day and July 4th holiday . There are limited releases which happen during this time frame but more than likely driven by the holidays.
+
+Again, we can see the increasing trend thru the years here as years are stacked on top of each other.
+
+
+```{r}
+dfb %>% ggseasonplot(main = "Seasonal Bourbon Seaches")
+```
+## Trend
+
+When we view each month independently, we see that across all months Bourbon searches are getting stronger and stronger. 
+```{r}
+dfb %>% ggsubseriesplot(ylab = "Bourbon Search Index", main = "Monthly Bourbon Search Growth")
+```
+
+# Time Series Forecasting
+
+"Anything that is observed sequentially over time is a time series"
+~ Roby Hyndman Forecasting: Principles and Practice. 
+
+Time series forecasting is a bit different than other forecasting methods because there is an implied ordered structure in the data. This also implies observations are dependent on the observation(s) before them. While, yes, time does play a role in other forecasting method the we assume independence of the observations. 
+
+In order to properly define dependence we need to look at autocorrelation.
+
+## AutoCorrelation
+
+Autocorrelation, is the correlation between a data point and a lagged version of itself. When predicting based on time it's important we capture this autocorrelation in our model. 
+
+### Technical talk (Skip if you wish)
+Why is capturing the autoregession important?
+
+From a Regression standpoint if we do not capture the autocorrelation and this spills into our residuals our model is no longer considered BLUE (Best Linear UnBiased Estimator). This doesn't imply that our estimator is biased it just means that our standard errors our underestimated, thereby, overestimating our t-scores.
+
+Let's have a look at the autocorrelation and note anything we can see. 
+
+
+```{r}
+ggAcf(dfb, main = "Bourbon Trends Autocorrleation")
+```
+The Autocorrelation plot shows a slow decreasing trend with a rhythmic pattern. This slow decreasing trend first gives us a clue that the data has an increasing trend. The rhythmic pattern to our data shows us there is a seasonal pattern. 
+
+## Forecasting
+
+When Forecasting it's good idea to come up with a couple simple baseline models
+
+1. Simple is better
+2. why use complex if simple works
+3. simple seasonal naive, simple smoothed model
+4. ETS
+5. Compare
+
+```{r}
+fit <- ets(dfb, restrict = F)
+```
+
+
+
+```{r}
+summary(fit)
+```
+
+
+```{r}
+autoplot(fit)
+cbind('Residuals' = residuals(fit),
+      'Forecast errors' = residuals(fit,type='response')) %>%
+  autoplot(facet=TRUE) + xlab("Year") + ylab("")
+
+```
+
+```{r}
+fit %>% forecast(h=12) %>%
+  autoplot() +
+  ylab("Bourbon Search Trends via Google") +
+  ggtitle('Bourbon Search Trends via Google Trends')
+```
+
