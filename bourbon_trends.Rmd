@@ -11,12 +11,13 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Google Trends Bourbon Data
 
-As a person who loves data and bourbon, I wanted to have a closer look at overall Bourbon demand. 
+As a person who loves data and bourbon, I wanted to have a closer look at overall Bourbon demand. If you haven't noticed, Bourbon in recent years has been booming. Gone are the days where one can walk into a liquor store store and pick up a bottle of Weller 12 or Blanton's. These bottles which used to sit on shelves, now, are allocated. These bottles while priced at $30 and $60 MSRP respectively can fetch up to $200 on the secondary. If you enter a liquor store today and ask for Blantons, you'll probably receive an interesting look. Liquor store after liquor store will tell you how those products fly off the shelf as soon as they come in. This demand isn't just seen in those specific products either, distiller after distiller has had to take everyday staples and put them under allocation. 
 
-If you haven't noticed, Bourbon in recent years has been booming. Gone are the days where one can walk into a liquor store store and pick up a bottle of Weller 12 or Blanton's. These bottles which used to sit on shelves, now, are allocated. These bottles while priced at $30 and $60 MSRP respectively can fetch up to $200 on the secondary. If you enter a liquor store today and ask for Blantons, you'll probably receive an interesting look. Liquor store after liquor store will tell you how those products fly off the shelf as soon as they come in. This demand isn't just seen in those specific products either, distiller after distiller has had to take everyday staples and put them under allocation. 
+You may be wondering, can't distilleries make more. Yes, they can and they are. Distilleries can't rush time, though. Think about it for a moment, there's bourbon on the shelf that have aged 8-12 years+. At the time of this writing 8-12 years ago, we were in the midst of the great recession. No product manager would've foreseen the level of demand we are seeing today back then. Ever since getting into bourbon a couple years ago, this has always fascinated me. How do product managers, plant managers, whomever it maybe, anticipate future demand for their product. If you make too much of it, one has a lot on hand and has to figure out a way to sell it or go bankrupt, as many distilleries have done. If one makes too little, well, you get the situation we are in now. 
 
-Typical bourbon on the shelf today will range in age from 4 years old  to 9 years old. This creates a catch 22 for distillers, if they distill too much and the demand dries up it could spell bankruptcy. As one who loves both data and bourbon, I wanted to explore this more. 
-The first step is acquiring data. No distiller or liquor store will give a normal Josh access to their data. I wish they would because as a Marketing Data Scientist I could find a lot of interesting things. Enter Google Trends. While this isn't transnational or distilling data, we can at least see overall demand
+This fascination has caused me to explore more and help answer the question, where is bourbon demand going?
+
+The first step is acquiring data. No distiller or liquor store will give a normal joe schmoe access to their data. I wish they would because as a Marketing Data Scientist I could have a lot of fun with that data. Enter Google Trends! While this isn't transnational or distilling data, we can at least see overall demand from a consumer perspective.
 
 Specifically, we are looking at the search term Bourbon in the distilled spirits type category
 ```{r}
@@ -33,9 +34,9 @@ dfb <- ts(df$bourbon, start = c(2004,1), frequency = 12)
 
 ## Exploratory Analysis
 
-When starting any analysis it's vitally important to explore it. One thing we need to establish, what is a search index? According to Google Trends:
+Before we begin to explore our data visually, we first need to understand our data. One thing we need to establish, what is a search index? According to Google Trends:
 
-oogle Trends normalizes search data to make comparisons between terms easier. Search results are normalized to the time and location of a query by the following process:
+Google Trends normalizes search data to make comparisons between terms easier. Search results are normalized to the time and location of a query by the following process:
 
 Each data point is divided by the total searches of the geography and time range it represents to compare relative popularity. Otherwise, places with the most search volume would always be ranked highest.
 
@@ -43,7 +44,7 @@ The resulting numbers are then scaled on a range of 0 to 100 based on a topic’
 
 Different regions that show the same search interest for a term don't always have the same total search volumes.
 
-This all may sound confusing and it is. Effectively, Google takes the number of searches for time frame and regions then proceeds to normalize everything based on the max volume during that time frame. 
+This all may sound confusing and i'll admit, it is. Effectively, Google takes the number of searches for time frame and regions then proceeds to normalize everything based on the max volume during the time frame you've selected 
 
 To explain in more detail, we are looking at the search term Bourbon in the US from 2004 - May 2020. Here we see that Dec 2019 has an index of 100. This implies, the most searches with the keyword Bourbon happened in December 2019 and searches for bourbon in January of 2005 are 25% that of December 2019. It would help to see actual numbers but Google doesn't release that.
 
@@ -52,7 +53,7 @@ Right away we can see an increasing trend in our searches for bourbon and season
 Let's dive deeper into the seasonality. 
 
 ```{r}
-autoplot(dfb, ylab = "Bourbon Search Index")
+autoplot(dfb, ylab = "Bourbon Search Index", main = "Bourbon Search Trends")
 ```
 ## Seasonality
 
@@ -61,7 +62,7 @@ Looking out our seasonality, we can see peaks come in November and December and 
 * Limited Releases
 
 
-We also see another, small, spike in seasonality mid year. This is more than likely driven by Fathers day and July 4th holiday . There are limited releases which happen during this time frame but more than likely driven by the holidays.
+We also see another, small, spike in seasonality mid year. This is more than likely driven by Fathers day and July 4th holiday . There are limited releases which happen during this time frame but more than likely those releases are taking advantage of the holidays.
 
 Again, we can see the increasing trend thru the years here as years are stacked on top of each other.
 
@@ -71,7 +72,7 @@ dfb %>% ggseasonplot(main = "Seasonal Bourbon Seaches")
 ```
 ## Trend
 
-When we view each month independently, we see that across all months Bourbon searches are getting stronger and stronger. 
+When we view each month independently, we see that all months are seeing an uptick in demand thru the years 
 ```{r}
 dfb %>% ggsubseriesplot(ylab = "Bourbon Search Index", main = "Monthly Bourbon Search Growth")
 ```
@@ -79,20 +80,22 @@ dfb %>% ggsubseriesplot(ylab = "Bourbon Search Index", main = "Monthly Bourbon S
 # Time Series Forecasting
 
 "Anything that is observed sequentially over time is a time series"
-~ Roby Hyndman Forecasting: Principles and Practice. 
+~ Rob Hyndman Forecasting: Principles and Practice. 
 
-Time series forecasting is a bit different than other forecasting methods because there is an implied ordered structure in the data. This also implies observations are dependent on the observation(s) before them. While, yes, time does play a role in other forecasting method the we assume independence of the observations. 
+Here's where we get into the fun part and we try to answer, what will demand be in X number of years. 
+
+Time series forecasting is a bit different than other forecasting methods because there is an implied ordered structure in the data. This means that our current observation is dependent on the previous observation(s). While, yes, time does play a role in other forecasting methodologies we assume independence of the observations. 
 
 In order to properly define dependence we need to look at autocorrelation.
 
 ## AutoCorrelation
 
-Autocorrelation, is the correlation between a data point and a lagged version of itself. When predicting based on time it's important we capture this autocorrelation in our model. 
+Autocorrelation, is the correlation between a data point and a lagged version of itself. When predicting based on time it's important we capture this autocorrelation in our model. If we aren't able to capture all of the autocorrelation it means we are not capturing all of the information about the underlying data generating process, i.e. the seasons in which people search for bourbon.
 
 ### Technical talk (Skip if you wish)
 Why is capturing the autoregession important?
 
-From a Regression standpoint if we do not capture the autocorrelation and this spills into our residuals our model is no longer considered BLUE (Best Linear UnBiased Estimator). This doesn't imply that our estimator is biased it just means that our standard errors our underestimated, thereby, overestimating our t-scores.
+From a Regression standpoint if we do not capture the autocorrelation and this spills into our residuals our model is no longer considered BLUE (Best Linear Unbiased Estimator). This doesn't imply that our estimators are biased it just means that our standard errors are underestimated, thereby, overestimating our t-scores.
 
 Let's have a look at the autocorrelation and note anything we can see. 
 
@@ -104,24 +107,64 @@ The Autocorrelation plot shows a slow decreasing trend with a rhythmic pattern. 
 
 ## Forecasting
 
-When Forecasting it's good idea to come up with a couple simple baseline models
+If we put ourselves in the product managers shoes and we want to help plan for the future, we want to create a model that's relatively simple and can be explained.
 
-1. Simple is better
-2. why use complex if simple works
-3. simple seasonal naive, simple smoothed model
-4. ETS
-5. Compare
+### Baseline Model
+When forecasting it's typically a best practice to create a simple model to serve as the benchmark. The main reason, if a simple model beats a complex model, use it. It's a lot easier to explain a simple model and simple models are a lot easier to calculate and maintain than complex models.
+
+Our benchmark in this case will be a Seasonal Naive Model. The main idea behind a seasonal naive model, each forecast will be set to the last observed value from the same season. We have yearly seasonality here. Therefore, if we were to predict January of 2020, our forecast would be set to the value of January 2019. 
+
+Looking at our plots we know that won't typically be ideal, given the underlying trend. Again, this is a simple model that is intended to serve as a benchmark.
+
+We'll train our model up until December 2018 then predict all of 2019 and some of 2020. 
+
 
 ```{r}
-fit <- ets(dfb, restrict = F)
+df_holdout <- window(dfb,start = 2001,end = c(2018,12))
+sn <- snaive(df_holdout, 18)
+autoplot(dfb)+
+  autolayer(sn, PI = FALSE) +
+  ggtitle("Bourbon Search Trends \nSeasonal Naive Prediction")+
+  xlab("Time") + ylab("Search Index") + guides(color = guide_legend(title = "Forecast"))
+  
 ```
 
+With the increasing trend in the data, we should expect 2019 to come in above 2018. This is exactly what we see. Our predictions should have a bias to underpredict actuals. Interesting take away here, we see the same under prediction at the beginning of 2020 but when come March time our prediction and actuals are relatively close.This is driven by the affect of the coronavirus. Searches for Bourbon were lower due to everything else going on. 
 
+### Holt Winters Model
+
+Specifically, we'll be looking at the Holt-Winters method which captures seasonality. This is often referred to as triple exponential smoothing. The idea here is to weight recent observations more than others. We would like to do this in our data has we have an underlying increasing trend and seasonality.
+
+In the background the Holt winters model can esimtate between 1 and 4 different weights. If you'd like to develop more depth on the topic please refer to Hyndman's textbook, Forecasting: Principles and Practice 
 
 ```{r}
+fit <- ets(dfb, restrict = T)
 summary(fit)
 ```
+There's a lot returned with our fit but we'll walk thru it so it doesn't look so scary.
 
+First thing which is returned is our model. An exponential model, ETS(M,Ad,M) or an ExpoenTial Smoothing model with multiplicative level, additive with a dampened trend and multiplicative seasonality. 
+
+The greek letters can look a little scary but we'll break them down so they are less scary.
+alpha - parameter estimate for our level weighting. A weighting close to one means favoring the recent observation
+beta - parameter estimate for our trend weighting. Small value here indicates a stable trend.
+gamma - parameter estimate for our seasonal weighting. This small value indicates that our seasons are pretty consistent. 
+phi - parameter estimate for our dampened trend. This takes what would be a continual increasing trend and flattens it out after some time. The closer the line is to 1 the less dampening
+
+
+
+## Accuracy
+
+```{r}
+accuracy(sn)
+
+```
+
+## Residuals
+
+When looking at the residuals, the error in our fitted values/predictions, we look for a constant mean and variance. 
+
+For the most part, if I was a product manager, I would be ok with the residuals. The Forecast errors don't look bad either except as we move past 2015. We see an increase in our variance in relation to pre 2015.
 
 ```{r}
 autoplot(fit)
@@ -130,11 +173,17 @@ cbind('Residuals' = residuals(fit),
   autoplot(facet=TRUE) + xlab("Year") + ylab("")
 
 ```
+```{r}
+ggAcf(residuals(fit))
+```
 
 ```{r}
-fit %>% forecast(h=12) %>%
+fit %>% forecast(h=120) %>%
   autoplot() +
   ylab("Bourbon Search Trends via Google") +
   ggtitle('Bourbon Search Trends via Google Trends')
 ```
 
+### Picture yourself as the Product Manager
+
+You now have to forecast how much demand will be in the next 10 years, why 10 years.
